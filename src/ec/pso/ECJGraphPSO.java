@@ -23,11 +23,12 @@ public class ECJGraphPSO extends Problem implements SimpleProblemForm{
 	public void evaluate(final EvolutionState state, final Individual ind, final int subpopulation, final int threadnum) {
 	    //The population initializer, a singleton object.
 		GraphInitializer init = (GraphInitializer) state.initializer;
-
-		if (ind.evaluated) return;   //don't evaluate the individual if it's already evaluated
+		//don't evaluate the individual if it's already evaluated
+		if (ind.evaluated) return;
         if (!(ind instanceof GraphParticle))
             state.output.fatal("Whoa!  It's not a GraphParticle!!!",null);
 
+        //each individual is an instance of class ec.pso.Particle
         GraphParticle ind2 = (GraphParticle) ind;
 
         Graph graph = createNewGraph(state, init.startNode.clone(), init.endNode.clone(), init.relevant, ind2.genome);

@@ -66,6 +66,12 @@ public class GraphInitializer extends SimpleInitializer {
 	public static int timeIdx = 0;
 	public static int costIdx = 0;
 
+	/**
+	 * Sets up the object by reading it from the parameters stored in
+	 * <i>state</i>, built off of the parameter base <i>base</i>. If an ancestor
+	 * implements this method, be sure to call super.setup(state,base); before
+	 * you do anything else.
+	 */
 	@Override
 	public void setup(EvolutionState state, Parameter base) {
 
@@ -91,10 +97,14 @@ public class GraphInitializer extends SimpleInitializer {
 			meanTimePerGen = new double[numGens];
 			meanCostPerGen = new double[numGens];
 		}
-
+		// serviceMap initialization , data structure map (Key: service name,
+		// Node Object (instance name, QoS Array,InputHashSet, OutputHashSet ))
 		parseWSCServiceFile(state.parameters.getString(servicesParam, null));
+		// taskInput set & taskoutput set initialization. instancelist for both
 		parseWSCTaskFile(state.parameters.getString(taskParam, null));
+		// taxonomyMap initialization. key: conlist and inslist , value: taxonomyNode
 		parseWSCTaxonomyFile(state.parameters.getString(taxonomyParam, null));
+		// findconceptsforinstances  useless ???
 		findConceptsForInstances();
 
 		random = new GraphRandom(state.random[0]);
@@ -107,11 +117,11 @@ public class GraphInitializer extends SimpleInitializer {
 		Set<String> startOutput = new HashSet<String>();
 		startOutput.addAll(taskInput);
 		startNode = new Node("start", mockQos, new HashSet<String>(), taskInput);
-		endNode = new Node("end", mockQos, taskOutput ,new HashSet<String>());
+		endNode = new Node("end", mockQos, taskOutput, new HashSet<String>());
 
 		populateTaxonomyTree();
 		relevant = getRelevantServices(serviceMap, taskInput, taskOutput);
-		mapServicesToIndices(relevant,serviceToIndexMap);
+		mapServicesToIndices(relevant, serviceToIndexMap);
 		if (!dynamicNormalisation)
 			calculateNormalisationBounds(relevant);
 
@@ -120,7 +130,7 @@ public class GraphInitializer extends SimpleInitializer {
 		state.parameters.set(genomeSizeParam, "" + relevant.size());
 	}
 
-	private void mapServicesToIndices(Set<Node> relevant, Map<String,Integer> serviceToIndexMap) {
+	private void mapServicesToIndices(Set<Node> relevant, Map<String, Integer> serviceToIndexMap) {
 		int i = 0;
 		for (Node r : relevant) {
 			serviceToIndexMap.put(r.getName(), i++);
@@ -129,7 +139,8 @@ public class GraphInitializer extends SimpleInitializer {
 
 	/**
 	 * Checks whether set of inputs can be completely satisfied by the search
-	 * set, making sure to check descendants of input concepts for the subsumption.
+	 * set, making sure to check descendants of input concepts for the
+	 * subsumption.
 	 *
 	 * @param inputs
 	 * @param searchSet
@@ -139,7 +150,7 @@ public class GraphInitializer extends SimpleInitializer {
 		boolean satisfied = true;
 		for (String input : inputs) {
 			Set<String> subsumed = taxonomyMap.get(input).getSubsumedConcepts();
-			if (!isIntersection( searchSet, subsumed )) {
+			if (!isIntersection(searchSet, subsumed)) {
 				satisfied = false;
 				break;
 			}
@@ -147,46 +158,46 @@ public class GraphInitializer extends SimpleInitializer {
 		return satisfied;
 	}
 
-    private static boolean isIntersection( Set<String> a, Set<String> b ) {
-        for ( String v1 : a ) {
-            if ( b.contains( v1 ) ) {
-                return true;
-            }
-        }
-        return false;
-    }
+	private static boolean isIntersection(Set<String> a, Set<String> b) {
+		for (String v1 : a) {
+			if (b.contains(v1)) {
+				return true;
+			}
+		}
+		return false;
+	}
 
 	/**
-	 * Populates the taxonomy tree by associating services to the
-	 * nodes in the tree.
+	 * Populates the taxonomy tree by associating services to the nodes in the
+	 * tree.
 	 */
 	private void populateTaxonomyTree() {
-		for (Node s: serviceMap.values()) {
+		for (Node s : serviceMap.values()) {
 			addServiceToTaxonomyTree(s);
 		}
 	}
 
 	private void addServiceToTaxonomyTree(Node s) {
 		// Populate outputs
-	    Set<TaxonomyNode> seenConceptsOutput = new HashSet<TaxonomyNode>();
+		Set<TaxonomyNode> seenConceptsOutput = new HashSet<TaxonomyNode>();
 		for (String outputVal : s.getOutputs()) {
 			TaxonomyNode n = taxonomyMap.get(outputVal);
 			s.getTaxonomyOutputs().add(n);
 
 			// Also add output to all parent nodes
 			Queue<TaxonomyNode> queue = new LinkedList<TaxonomyNode>();
-			queue.add( n );
+			queue.add(n);
 
 			while (!queue.isEmpty()) {
-			    TaxonomyNode current = queue.poll();
-		        seenConceptsOutput.add( current );
-		        current.servicesWithOutput.add(s);
-		        for (TaxonomyNode parent : current.parents) {
-		            if (!seenConceptsOutput.contains( parent )) {
-		                queue.add(parent);
-		                seenConceptsOutput.add(parent);
-		            }
-		        }
+				TaxonomyNode current = queue.poll();
+				seenConceptsOutput.add(current);
+				current.servicesWithOutput.add(s);
+				for (TaxonomyNode parent : current.parents) {
+					if (!seenConceptsOutput.contains(parent)) {
+						queue.add(parent);
+						seenConceptsOutput.add(parent);
+					}
+				}
 			}
 		}
 		// Populate inputs
@@ -196,36 +207,35 @@ public class GraphInitializer extends SimpleInitializer {
 
 			// Also add input to all children nodes
 			Queue<TaxonomyNode> queue = new LinkedList<TaxonomyNode>();
-			queue.add( n );
+			queue.add(n);
 
-			while(!queue.isEmpty()) {
+			while (!queue.isEmpty()) {
 				TaxonomyNode current = queue.poll();
-				seenConceptsInput.add( current );
+				seenConceptsInput.add(current);
 
-			    Set<String> inputs = current.servicesWithInput.get(s);
-			    if (inputs == null) {
-			    	inputs = new HashSet<String>();
-			    	inputs.add(inputVal);
-			    	current.servicesWithInput.put(s, inputs);
-			    }
-			    else {
-			    	inputs.add(inputVal);
-			    }
+				Set<String> inputs = current.servicesWithInput.get(s);
+				if (inputs == null) {
+					inputs = new HashSet<String>();
+					inputs.add(inputVal);
+					current.servicesWithInput.put(s, inputs);
+				} else {
+					inputs.add(inputVal);
+				}
 
-			    for (TaxonomyNode child : current.children) {
-			        if (!seenConceptsInput.contains( child )) {
-			            queue.add(child);
-			            seenConceptsInput.add( child );
-			        }
-			    }
+				for (TaxonomyNode child : current.children) {
+					if (!seenConceptsInput.contains(child)) {
+						queue.add(child);
+						seenConceptsInput.add(child);
+					}
+				}
 			}
 		}
 		return;
 	}
 
 	/**
-	 * Converts input, output, and service instance values to their corresponding
-	 * ontological parent.
+	 * Converts input, output, and service instance values to their
+	 * corresponding ontological parent.
 	 */
 	private void findConceptsForInstances() {
 		Set<String> temp = new HashSet<String>();
@@ -237,7 +247,7 @@ public class GraphInitializer extends SimpleInitializer {
 
 		temp.clear();
 		for (String s : taskOutput)
-				temp.add(taxonomyMap.get(s).parents.get(0).value);
+			temp.add(taxonomyMap.get(s).parents.get(0).value);
 		taskOutput.clear();
 		taskOutput.addAll(temp);
 
@@ -265,7 +275,7 @@ public class GraphInitializer extends SimpleInitializer {
 	 * @param serviceMap
 	 * @return relevant services
 	 */
-	private Set<Node> getRelevantServices(Map<String,Node> serviceMap, Set<String> inputs, Set<String> outputs) {
+	private Set<Node> getRelevantServices(Map<String, Node> serviceMap, Set<String> inputs, Set<String> outputs) {
 		// Copy service map values to retain original
 		Collection<Node> services = new ArrayList<Node>(serviceMap.values());
 
@@ -275,7 +285,7 @@ public class GraphInitializer extends SimpleInitializer {
 		while (!sFound.isEmpty()) {
 			sSet.addAll(sFound);
 			services.removeAll(sFound);
-			for (Node s: sFound) {
+			for (Node s : sFound) {
 				cSearch.addAll(s.getOutputs());
 			}
 			sFound.clear();
@@ -284,8 +294,7 @@ public class GraphInitializer extends SimpleInitializer {
 
 		if (isSubsumed(outputs, cSearch)) {
 			return sSet;
-		}
-		else {
+		} else {
 			String message = "It is impossible to perform a composition using the services and settings provided.";
 			System.out.println(message);
 			System.exit(0);
@@ -294,10 +303,10 @@ public class GraphInitializer extends SimpleInitializer {
 	}
 
 	/**
-	 * Discovers all services from the provided collection whose
-	 * input can be satisfied either (a) by the input provided in
-	 * searchSet or (b) by the output of services whose input is
-	 * satisfied by searchSet (or a combination of (a) and (b)).
+	 * Discovers all services from the provided collection whose input can be
+	 * satisfied either (a) by the input provided in searchSet or (b) by the
+	 * output of services whose input is satisfied by searchSet (or a
+	 * combination of (a) and (b)).
 	 *
 	 * @param services
 	 * @param searchSet
@@ -305,7 +314,7 @@ public class GraphInitializer extends SimpleInitializer {
 	 */
 	private Set<Node> discoverService(Collection<Node> services, Set<String> searchSet) {
 		Set<Node> found = new HashSet<Node>();
-		for (Node s: services) {
+		for (Node s : services) {
 			if (isSubsumed(s.getInputs(), searchSet))
 				found.add(s);
 		}
@@ -319,142 +328,135 @@ public class GraphInitializer extends SimpleInitializer {
 	 * @param fileName
 	 */
 	private void parseWSCServiceFile(String fileName) {
-        Set<String> inputs = new HashSet<String>();
-        Set<String> outputs = new HashSet<String>();
-        double[] qos = new double[4];
+		Set<String> inputs = new HashSet<String>();
+		Set<String> outputs = new HashSet<String>();
+		double[] qos = new double[4];
 
-        try {
-        	File fXmlFile = new File(fileName);
-        	DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-        	DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-        	Document doc = dBuilder.parse(fXmlFile);
+		try {
+			File fXmlFile = new File(fileName);
+			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+			Document doc = dBuilder.parse(fXmlFile);
 
-        	NodeList nList = doc.getElementsByTagName("service");
+			NodeList nList = doc.getElementsByTagName("service");
 
-        	for (int i = 0; i < nList.getLength(); i++) {
-        		org.w3c.dom.Node nNode = nList.item(i);
-        		Element eElement = (Element) nNode;
+			for (int i = 0; i < nList.getLength(); i++) {
+				org.w3c.dom.Node nNode = nList.item(i);
+				Element eElement = (Element) nNode;
+				// service name, for example serv904934656
+				String name = eElement.getAttribute("name");
 
-        		String name = eElement.getAttribute("name");
+				qos[TIME] = Double.valueOf(eElement.getAttribute("Res"));
+				qos[COST] = Double.valueOf(eElement.getAttribute("Pri"));
+				qos[AVAILABILITY] = Double.valueOf(eElement.getAttribute("Ava"));
+				qos[RELIABILITY] = Double.valueOf(eElement.getAttribute("Rel"));
 
-    		    qos[TIME] = Double.valueOf(eElement.getAttribute("Res"));
-    		    qos[COST] = Double.valueOf(eElement.getAttribute("Pri"));
-    		    qos[AVAILABILITY] = Double.valueOf(eElement.getAttribute("Ava"));
-    		    qos[RELIABILITY] = Double.valueOf(eElement.getAttribute("Rel"));
-
-				// Get inputs
+				// Get inputs, instance name, for example inst995667695
 				org.w3c.dom.Node inputNode = eElement.getElementsByTagName("inputs").item(0);
-				NodeList inputNodes = ((Element)inputNode).getElementsByTagName("instance");
+				NodeList inputNodes = ((Element) inputNode).getElementsByTagName("instance");
 				for (int j = 0; j < inputNodes.getLength(); j++) {
 					org.w3c.dom.Node in = inputNodes.item(j);
 					Element e = (Element) in;
 					inputs.add(e.getAttribute("name"));
 				}
 
-				// Get outputs
+				// Get outputs instance name, for example inst1348768777
 				org.w3c.dom.Node outputNode = eElement.getElementsByTagName("outputs").item(0);
-				NodeList outputNodes = ((Element)outputNode).getElementsByTagName("instance");
+				NodeList outputNodes = ((Element) outputNode).getElementsByTagName("instance");
 				for (int j = 0; j < outputNodes.getLength(); j++) {
 					org.w3c.dom.Node out = outputNodes.item(j);
 					Element e = (Element) out;
 					outputs.add(e.getAttribute("name"));
 				}
 
-                Node ws = new Node(name, qos, inputs, outputs);
-                serviceMap.put(name, ws);
-                inputs = new HashSet<String>();
-                outputs = new HashSet<String>();
-                qos = new double[4];
-        	}
-        }
-        catch(IOException ioe) {
-            System.out.println("Service file parsing failed...");
-        }
-        catch (ParserConfigurationException e) {
-            System.out.println("Service file parsing failed...");
+				Node ws = new Node(name, qos, inputs, outputs);
+				serviceMap.put(name, ws);
+				inputs = new HashSet<String>();
+				outputs = new HashSet<String>();
+				qos = new double[4];
+			}
+		} catch (IOException ioe) {
+			System.out.println("Service file parsing failed...");
+		} catch (ParserConfigurationException e) {
+			System.out.println("Service file parsing failed...");
+		} catch (SAXException e) {
+			System.out.println("Service file parsing failed...");
 		}
-        catch (SAXException e) {
-            System.out.println("Service file parsing failed...");
-		}
-    }
+	}
 
 	/**
-	 * Parses the WSC task file with the given name, extracting input and
-	 * output values to be used as the composition task.
+	 * Parses the WSC task file with the given name, extracting input and output
+	 * values to be used as the composition task.
 	 *
 	 * @param fileName
 	 */
 	private void parseWSCTaskFile(String fileName) {
 		try {
-	    	File fXmlFile = new File(fileName);
-	    	DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-	    	DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-	    	Document doc = dBuilder.parse(fXmlFile);
+			File fXmlFile = new File(fileName);
+			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+			Document doc = dBuilder.parse(fXmlFile);
 
-	    	org.w3c.dom.Node provided = doc.getElementsByTagName("provided").item(0);
-	    	NodeList providedList = ((Element) provided).getElementsByTagName("instance");
-	    	taskInput = new HashSet<String>();
-	    	for (int i = 0; i < providedList.getLength(); i++) {
+			org.w3c.dom.Node provided = doc.getElementsByTagName("provided").item(0);
+			NodeList providedList = ((Element) provided).getElementsByTagName("instance");
+			taskInput = new HashSet<String>();
+			for (int i = 0; i < providedList.getLength(); i++) {
 				org.w3c.dom.Node item = providedList.item(i);
 				Element e = (Element) item;
 				taskInput.add(e.getAttribute("name"));
-	    	}
+			}
 
-	    	org.w3c.dom.Node wanted = doc.getElementsByTagName("wanted").item(0);
-	    	NodeList wantedList = ((Element) wanted).getElementsByTagName("instance");
-	    	taskOutput = new HashSet<String>();
-	    	for (int i = 0; i < wantedList.getLength(); i++) {
+			org.w3c.dom.Node wanted = doc.getElementsByTagName("wanted").item(0);
+			NodeList wantedList = ((Element) wanted).getElementsByTagName("instance");
+			taskOutput = new HashSet<String>();
+			for (int i = 0; i < wantedList.getLength(); i++) {
 				org.w3c.dom.Node item = wantedList.item(i);
 				Element e = (Element) item;
 				taskOutput.add(e.getAttribute("name"));
-	    	}
-		}
-		catch (ParserConfigurationException e) {
-            System.out.println("Task file parsing failed...");
-            e.printStackTrace();
-		}
-		catch (SAXException e) {
-            System.out.println("Task file parsing failed...");
-            e.printStackTrace();
-		}
-		catch (IOException e) {
-            System.out.println("Task file parsing failed...");
-            e.printStackTrace();
+			}
+		} catch (ParserConfigurationException e) {
+			System.out.println("Task file parsing failed...");
+			e.printStackTrace();
+		} catch (SAXException e) {
+			System.out.println("Task file parsing failed...");
+			e.printStackTrace();
+		} catch (IOException e) {
+			System.out.println("Task file parsing failed...");
+			e.printStackTrace();
 		}
 	}
 
 	/**
-	 * Parses the WSC taxonomy file with the given name, building a
-	 * tree-like structure.
+	 * Parses the WSC taxonomy file with the given name, building a tree-like
+	 * structure.
 	 *
 	 * @param fileName
 	 */
 	private void parseWSCTaxonomyFile(String fileName) {
 		try {
-	    	File fXmlFile = new File(fileName);
-	    	DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-	    	DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
-	    	Document doc = dBuilder.parse(fXmlFile);
-	    	NodeList taxonomyRoots = doc.getChildNodes();
+			File fXmlFile = new File(fileName);
+			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+			Document doc = dBuilder.parse(fXmlFile);
+			NodeList taxonomyRoots = doc.getChildNodes();
 
-	    	processTaxonomyChildren(null, taxonomyRoots);
+			processTaxonomyChildren(null, taxonomyRoots);
 		}
 
 		catch (ParserConfigurationException e) {
-            System.err.println("Taxonomy file parsing failed...");
-		}
-		catch (SAXException e) {
-            System.err.println("Taxonomy file parsing failed...");
-		}
-		catch (IOException e) {
-            System.err.println("Taxonomy file parsing failed...");
+			System.err.println("Taxonomy file parsing failed...");
+		} catch (SAXException e) {
+			System.err.println("Taxonomy file parsing failed...");
+		} catch (IOException e) {
+			System.err.println("Taxonomy file parsing failed...");
 		}
 	}
 
 	/**
 	 * Recursive function for recreating taxonomy structure from file.
 	 *
-	 * @param parent - Nodes' parent
+	 * @param parent
+	 *            - Nodes' parent
 	 * @param nodes
 	 */
 	private void processTaxonomyChildren(TaxonomyNode parent, NodeList nodes) {
@@ -462,16 +464,16 @@ public class GraphInitializer extends SimpleInitializer {
 			for (int i = 0; i < nodes.getLength(); i++) {
 				org.w3c.dom.Node ch = nodes.item(i);
 
-			if (!(ch instanceof Text)) {
-				Element currNode = (Element) nodes.item(i);
-				String value = currNode.getAttribute("name");
-					TaxonomyNode taxNode = taxonomyMap.get( value );
+				if (!(ch instanceof Text)) {
+					Element currNode = (Element) nodes.item(i);
+					String value = currNode.getAttribute("name");
+					TaxonomyNode taxNode = taxonomyMap.get(value);
 					if (taxNode == null) {
-					    taxNode = new TaxonomyNode(value);
-					    taxonomyMap.put( value, taxNode );
+						taxNode = new TaxonomyNode(value);
+						taxonomyMap.put(value, taxNode);
 					}
 					if (parent != null) {
-					    taxNode.parents.add(parent);
+						taxNode.parents.add(parent);
 						parent.children.add(taxNode);
 					}
 
@@ -483,7 +485,7 @@ public class GraphInitializer extends SimpleInitializer {
 	}
 
 	private void calculateNormalisationBounds(Set<Node> services) {
-		for(Node service: services) {
+		for (Node service : services) {
 			double[] qos = service.getQos();
 
 			// Availability
@@ -510,7 +512,8 @@ public class GraphInitializer extends SimpleInitializer {
 			if (cost < minCost)
 				minCost = cost;
 		}
-		// Adjust max. cost and max. time based on the number of services in shrunk repository
+		// Adjust max. cost and max. time based on the number of services in
+		// shrunk repository
 		maxCost *= services.size();
 		maxTime *= services.size();
 
