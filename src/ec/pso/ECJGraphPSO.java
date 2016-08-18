@@ -21,7 +21,8 @@ public class ECJGraphPSO extends Problem implements SimpleProblemForm{
 
 	@Override
 	public void evaluate(final EvolutionState state, final Individual ind, final int subpopulation, final int threadnum) {
-	    GraphInitializer init = (GraphInitializer) state.initializer;
+	    //The population initializer, a singleton object.
+		GraphInitializer init = (GraphInitializer) state.initializer;
 
 		if (ind.evaluated) return;   //don't evaluate the individual if it's already evaluated
         if (!(ind instanceof GraphParticle))
