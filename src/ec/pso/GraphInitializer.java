@@ -102,9 +102,10 @@ public class GraphInitializer extends SimpleInitializer {
 		parseWSCServiceFile(state.parameters.getString(servicesParam, null));
 		// taskInput set & taskoutput set initialization. instancelist for both
 		parseWSCTaskFile(state.parameters.getString(taskParam, null));
-		// taxonomyMap initialization. key: conlist and inslist , value: taxonomyNode
+		// taxonomyMap initialization. key: conlist and inslist , value:
+		// taxonomyNode
 		parseWSCTaxonomyFile(state.parameters.getString(taxonomyParam, null));
-		// findconceptsforinstances  useless ???
+		// findconceptsforinstances useless ???
 		findConceptsForInstances();
 
 		random = new GraphRandom(state.random[0]);
@@ -118,9 +119,10 @@ public class GraphInitializer extends SimpleInitializer {
 		startOutput.addAll(taskInput);
 		startNode = new Node("start", mockQos, new HashSet<String>(), taskInput);
 		endNode = new Node("end", mockQos, taskOutput, new HashSet<String>());
-
+		// Populates the taxonomy tree adding services to the tree to create inputlist and outputlist associated with each toxonomy node
 		populateTaxonomyTree();
 		relevant = getRelevantServices(serviceMap, taskInput, taskOutput);
+		//add all the relevant services to a Map
 		mapServicesToIndices(relevant, serviceToIndexMap);
 		if (!dynamicNormalisation)
 			calculateNormalisationBounds(relevant);
